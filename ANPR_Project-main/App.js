@@ -2,12 +2,6 @@ import React, { useState, useEffect } from "react";
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Image, SafeAreaView, Platform, Switch, Alert, FlatList } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { io } from "socket.io-client";
-import React from "react";
-import { NavigationContainer } from "@react-navigation/native";
-import { createStackNavigator } from "@react-navigation/stack";
-
-import EmailScreen from "./screens/EmailScreen";
-import OtpScreen from "./screens/OtpScreen";
 
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
@@ -15,7 +9,6 @@ import NotificationPopup from './src/components/NotificationPopup';
 import HistoryScreen from './src/components/HistoryScreen';
 import LaneScreen from './src/components/LaneScreen';
 import MenuScreen from './src/components/MenuScreen';
-import LoginScreen from './src/components/LoginScreen';
 import ProfileScreen from './src/components/ProfileScreen';
 
 
@@ -23,20 +16,7 @@ import ProfileScreen from './src/components/ProfileScreen';
 // Ensure this IP and protocol match your Flask-SocketIO setup
 const SOCKET_URL = "http://10.250.34.10:80";
 
-// Correct Passcode
-const CORRECT_PASSCODE = "HELPIS";
-const Stack = createStackNavigator();
 
-export default function App() {
-  return (
-    <NavigationContainer>
-      <Stack.Navigator>
-        <Stack.Screen name="Email" component={EmailScreen} />
-        <Stack.Screen name="OTP" component={OtpScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>
-  );
-}
 // --- NOTIFICATION HANDLER SETUP ---
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
@@ -682,7 +662,6 @@ const App = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [currentScreen, setCurrentScreen] = useState('Menu'); // Default to Menu after login
     const [previousScreen, setPreviousScreen] = useState('Menu'); // Track previous screen for Settings back button
-    const [passcode, setPasscode] = useState("");
     const [errorMessage, setErrorMessage] = useState("");
     const [lastDetectedTime, setLastDetectedTime] = useState("N/A");
     const [studentName, setStudentName] = useState("");
@@ -735,7 +714,8 @@ const App = () => {
                 }
             }
 
-            await AsyncStorage.removeItem("user_authenticated");
+          await AsyncStorage.removeItem("user_authenticated"); // 👈 ADD THIS LINE
+
 const storedPasscode = await AsyncStorage.getItem("user_authenticated");
 if (storedPasscode === "true") {
     setIsAuthenticated(true);
@@ -868,8 +848,14 @@ if (storedPasscode === "true") {
     }, [tr]);
 
 
+const handleLogin = async () => {
+    // Check email format
+    if (!userEmail.endsWith("@kl.his.edu.my")) {
+        setErrorMessage("Use school email only");
+        showNotification("Use school email only", "error");
+        return;
+    }
 
-    const handleEmailLogin = async () => {
     try {
         const response = await fetch("http://10.252.2.107:3000/login", {
             method: "POST",
@@ -881,20 +867,23 @@ if (storedPasscode === "true") {
             }),
         });
 
-        const text = await response.text();
-        console.log("SERVER RESPONSE:", text);
-
-        const data = JSON.parse(text);
+        const data = await response.json();
 
         if (response.ok) {
-            setIsAuthenticated(true);
             await AsyncStorage.setItem("user_authenticated", "true");
+            setIsAuthenticated(true);
+            setCurrentScreen("Menu");
+
+            showNotification("Login successful", "success");
         } else {
-            alert(data.message || "Login failed");
+            setErrorMessage(data.message || "Login failed");
+            showNotification(data.message || "Login failed", "error");
         }
+
     } catch (error) {
         console.error("Login error:", error);
-        alert("Cannot connect to server");
+        setErrorMessage("Cannot connect to server");
+        showNotification("Cannot connect to server", "error");
     }
 };
 
@@ -1010,27 +999,33 @@ if (storedPasscode === "true") {
 
     // 1. Render Login Screen
     if (!isAuthenticated) {
-    return (
-        <LoginScreen
-            onLoginSuccess={async (user) => {
-                setUserName(user.fullname || '');
-                setUserEmail(user.email || '');
-                const data = { 
-                    name: user.fullname, 
-                    email: user.email, 
-                    date: new Date().toISOString() 
-                };
-                await AsyncStorage.setItem("user_registration", JSON.stringify(data));
-                await AsyncStorage.setItem("user_authenticated", "true");
-                setIsAuthenticated(true);
-                setCurrentScreen('Menu');
-            }}
-            styles={styles}
-            colors={rawColors}
-            tr={tr}
-        />
-    );
-}
+        return (
+            <View style={styles.authContainer}>
+
+                <View style={styles.header}>
+                    <Text style={styles.schoolName}>{tr.schoolName}</Text>
+                    <Image source={require("./assets/icon.png")} style={styles.banner} />
+                    <Text style={styles.subheading}>{tr.systemTitle}</Text>
+                </View>
+
+                <Text style={styles.instruction}>{tr.accessControl}</Text>
+
+                <TextInput
+    style={styles.input}
+    value={userEmail}
+    onChangeText={setUserEmail}
+    placeholder="Enter school email"
+    autoCapitalize="none"
+    placeholderTextColor={isDarkMode ? darkColors.textSecondary : lightColors.textSecondary}
+/>
+    
+                {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
+                <TouchableOpacity style={styles.button} onPress={handleLogin}>
+                    <Text style={styles.buttonText}>{tr.authLaunch}</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
 
     // 2. Render Settings Screen
     if (currentScreen === 'Settings') {
@@ -1218,6 +1213,7 @@ if (storedPasscode === "true") {
                 <View style={styles.logContainer}>
                     {/* ⭐️ ScrollView added here to allow scrolling within the log box */}
                     <FlatList
+                        data={filteredRecentList.slice(0, 10)}
                         keyExtractor={(item, index) => index.toString()}
                         style={{ maxHeight: 400 }}
                         contentContainerStyle={styles.logContentContainer}
@@ -1260,3 +1256,4 @@ if (storedPasscode === "true") {
     );
 };
 
+export default App;
