@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Image, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Image, Linking, ScrollView } from 'react-native';
 
 const MenuScreen = ({ onNavigate, styles, colors, tr }) => {
     const menuItems = [
@@ -11,11 +11,12 @@ const MenuScreen = ({ onNavigate, styles, colors, tr }) => {
 
     return (
         <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-            <View style={[styles.container, { justifyContent: 'center', flex: 1, paddingHorizontal: 30 }]}>
+          <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+    <View style={[styles.container, { flex: 1, paddingHorizontal: 20, paddingTop: 20 }]}>
 
                 {/* Header */}
-                <View style={[styles.header, { marginBottom: 50 }]}>
-                    <Text style={[styles.schoolName, { fontSize: 26, marginBottom: 15, fontWeight: '900' }]}>{tr.schoolName}</Text>
+                <View style={[styles.header, { marginBottom: 20 }]}>
+                    <Text style={[styles.schoolName, { fontSize: 22, marginBottom: 15, fontWeight: '900', textAlign: 'center', flexWrap: 'wrap' }]}>{tr.schoolName}</Text>
                     <View style={{
                         shadowColor: "#000",
                         shadowOffset: { width: 0, height: 4 },
@@ -26,7 +27,7 @@ const MenuScreen = ({ onNavigate, styles, colors, tr }) => {
                     }}>
                         <Image source={require("../../assets/help-logo.png")} style={[styles.banner, { width: 90, height: 90, borderRadius: 45 }]} />
                     </View>
-                    <Text style={[styles.mainTitle, { marginTop: 20, fontSize: 32, fontWeight: 'bold', letterSpacing: 0.5 }]}>Main Menu</Text>
+                    <Text style={[styles.mainTitle, { marginTop: 20, fontSize: 29, fontWeight: 'bold', letterSpacing: 0.5 }]}>Main Menu</Text>
                 </View>
 
                 {/* Menu Items */}
@@ -36,14 +37,14 @@ const MenuScreen = ({ onNavigate, styles, colors, tr }) => {
                             key={index}
                             style={{
                                 backgroundColor: colors.card,
-                                marginBottom: 18,
+                                marginBottom: 12,
                                 borderRadius: 16,
                                 borderWidth: 1,
                                 borderColor: colors.border,
                                 flexDirection: 'row',
                                 alignItems: 'center',
-                                paddingVertical: 18,
-                                paddingHorizontal: 24,
+                                paddingVertical: 15,
+                                paddingHorizontal: 23,
                             }}
                             onPress={() => onNavigate(item.screen)}
                             activeOpacity={0.7}
@@ -51,7 +52,7 @@ const MenuScreen = ({ onNavigate, styles, colors, tr }) => {
                             <View style={{
                                 width: 48,
                                 height: 48,
-                                borderRadius: 12,
+                                borderRadius: 20,
                                 backgroundColor: colors.accent + '20',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -73,14 +74,14 @@ const MenuScreen = ({ onNavigate, styles, colors, tr }) => {
                 {/* Log Out Button */}
                 <TouchableOpacity
                     style={{
-                         backgroundColor: '#FF3B30',
-                          marginTop: 40,
+                         backgroundColor: '#fc7f78ff',
+                          marginTop: 30,
                           alignSelf: 'center',
                           paddingVertical: 14,
                           paddingHorizontal: 40, 
                           borderRadius: 12,
                           borderWidth: 2,
-                          borderColor: '#CC0000',
+                          borderColor: '#fc7f78ff',
 }}
         onPress={() => onNavigate('Logout')}
                     activeOpacity={0.8}
@@ -89,7 +90,9 @@ const MenuScreen = ({ onNavigate, styles, colors, tr }) => {
                 </TouchableOpacity>
 
             </View>
-        </SafeAreaView>
+    
+</ScrollView>
+</SafeAreaView>
     );
 };
 
