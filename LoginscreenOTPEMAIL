@@ -1,0 +1,95 @@
+// 1. Login screen — two-step OTP flow
+if (!isAuthenticated) {
+    return (
+        <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+            <ScrollView
+                contentContainerStyle={{ flexGrow: 1 }}
+                keyboardShouldPersistTaps="handled"
+            >
+                <View style={styles.authContainer}>
+
+                    <View style={styles.header}>
+                        <Text style={styles.schoolName}>{tr.schoolName}</Text>
+                        <Image source={require("./assets/icon.png")} style={styles.banner} />
+                        <Text style={styles.subheading}>{tr.systemTitle}</Text>
+                    </View>
+
+                    <Text style={styles.instruction}>{tr.accessControl}</Text>
+
+                    {!otpSent ? (
+                        // Step 1 — Email input
+                        <>
+                            <TextInput
+                                style={styles.input}
+                                value={userEmail}
+                                onChangeText={(text) => {
+                                    setUserEmail(text);
+                                    setErrorMessage("");
+                                }}
+                                placeholder="Enter school email"
+                                autoCapitalize="none"
+                                keyboardType="email-address"
+                                returnKeyType="done"
+                                onSubmitEditing={handleSendOtp}
+                                placeholderTextColor={isDarkMode ? darkColors.textSecondary : lightColors.textSecondary}
+                            />
+                            {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
+                            <TouchableOpacity
+                                style={[styles.button, otpLoading && { opacity: 0.6 }]}
+                                onPress={handleSendOtp}
+                                disabled={otpLoading}
+                            >
+                                <Text style={styles.buttonText}>
+                                    {otpLoading ? "Sending..." : "Send Code"}
+                                </Text>
+                            </TouchableOpacity>
+                        </>
+                    ) : (
+                        // Step 2 — OTP input
+                        <>
+                            <Text style={[styles.instruction, { marginBottom: 10 }]}>
+                                Code sent to {userEmail}
+                            </Text>
+                            <TextInput
+                                style={styles.input}
+                                value={otpInput}
+                                onChangeText={(text) => {
+                                    setOtpInput(text);
+                                    setErrorMessage("");
+                                }}
+                                placeholder="Enter 6-digit code"
+                                keyboardType="number-pad"
+                                maxLength={6}
+                                returnKeyType="done"
+                                onSubmitEditing={handleVerifyOtp}
+                                placeholderTextColor={isDarkMode ? darkColors.textSecondary : lightColors.textSecondary}
+                            />
+                            {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
+                            <TouchableOpacity
+                                style={[styles.button, otpLoading && { opacity: 0.6 }]}
+                                onPress={handleVerifyOtp}
+                                disabled={otpLoading}
+                            >
+                                <Text style={styles.buttonText}>
+                                    {otpLoading ? "Verifying..." : "Verify Code"}
+                                </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={() => { setOtpSent(false); setOtpInput(""); setErrorMessage(""); }}
+                                style={{ marginTop: 20 }}
+                            >
+                                <Text style={[styles.instruction, { marginBottom: 0, color: rawColors.accent }]}>
+                                    ← Use a different email
+                                </Text>
+                            </TouchableOpacity>
+                        </>
+                    )}
+
+                </View>
+            </ScrollView>
+        </KeyboardAvoidingView>
+    );
+}
