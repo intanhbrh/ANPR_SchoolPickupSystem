@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Image, SafeAreaView, Platform, Switch, Alert, FlatList } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, KeyboardAvoidingView, Image, SafeAreaView, Platform, Switch, Alert, FlatList } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { io } from "socket.io-client";
 
@@ -776,7 +776,6 @@ const App = () => {
                 console.log('Must use physical device for Push Notifications');
             }
         };
-
         registerForPushNotificationsAsync();
     }, []);
 
@@ -1004,6 +1003,16 @@ const handleLogin = async () => {
     // 1. Render Login Screen
     if (!isAuthenticated) {
         return (
+        <KeyboardAvoidingView
+            style={{ flex: 1}}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+            <ScrollView
+                contentContainerStyle={{ flexGrow: 1}}
+                keyboardShouldPersistTaps="handled"
+                style={{backgroundColor: isDarkMode ? '#121212' : '#FFFFFF' }}
+            >
+            
             <View style={styles.authContainer}>
 
                 <View style={styles.header}>
@@ -1015,12 +1024,12 @@ const handleLogin = async () => {
                 <Text style={styles.instruction}>{tr.accessControl}</Text>
 
                 <TextInput
-    style={styles.input}
-    value={userEmail}
-    onChangeText={setUserEmail}
-    placeholder="Enter school email"
-    autoCapitalize="none"
-    placeholderTextColor={isDarkMode ? darkColors.textSecondary : lightColors.textSecondary}
+                    style={styles.input}
+                    value={userEmail}
+                    onChangeText={setUserEmail}
+                    placeholder="Enter school email"
+                    autoCapitalize="none"
+                    placeholderTextColor={isDarkMode ? darkColors.textSecondary : lightColors.textSecondary}
 />
     
                 {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
@@ -1028,8 +1037,11 @@ const handleLogin = async () => {
                     <Text style={styles.buttonText}>{tr.authLaunch}</Text>
                 </TouchableOpacity>
             </View>
+            </ScrollView>
+            </KeyboardAvoidingView>
         );
     }
+    
 
     // 2. Render Settings Screen
     if (currentScreen === 'Settings') {
@@ -1251,3 +1263,4 @@ await AsyncStorage.removeItem("user_registration");
 };
 
 export default App;
+
