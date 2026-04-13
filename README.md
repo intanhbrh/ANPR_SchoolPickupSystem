@@ -90,3 +90,9 @@ This project was developed as part of an **A-Level Computer Science group projec
   - Database usage  
   - System design  
  
+## 📂 Project Structure
+### Login Page
+![Main menu Page](images/mainmenu.png)
+
+### Menu Page
+![notif](images/notif.jpeg)
