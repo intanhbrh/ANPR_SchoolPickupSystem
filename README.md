@@ -61,7 +61,6 @@ The goal of this project is to:
 ### Other Tools
 - Expo Notifications  
 - AsyncStorage  
-- Nodemailer (OTP system)  
 
 ---
 
