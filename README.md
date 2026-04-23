@@ -160,8 +160,9 @@ The app automatically detects the user role based on their school email:
 - The school database is only accessible on **school WiFi**
   
 ## 📂 Project Structure
+
 ### Login Page
-![Main menu Page](images/mainmenu.png)
+<img src="images/mainmenu.png" width="300"/>
 
 ### Menu Page
-![notif](images/notif.jpeg)
+<img src="images/notif.jpeg" width="300"/>
