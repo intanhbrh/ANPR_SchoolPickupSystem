@@ -1,3 +1,7 @@
+to install the system : 
+android : https://expo.dev/accounts/intanhbrh/projects/ANPR_Project/builds/5ef412a1-cce9-4240-850b-ad7d4ec8cc92
+ios: 
+
 # 🚗 ANPR School Pickup System
 
 ## 📌 Overview
