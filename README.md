@@ -164,4 +164,4 @@ The app automatically detects the user role based on their school email:
 ![Main menu Page](images/mainmenu.png)
 
 ### Menu Page
-![notif](images/notif.jpeg)
+![notif](images/notif.jpeg)[notif](images/notif.jpeg)
