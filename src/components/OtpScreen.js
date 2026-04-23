@@ -38,7 +38,6 @@ export default function OtpScreen({ route, navigation }) {
         placeholder="Enter OTP"
         style={{ borderWidth: 1, padding: 10, marginBottom: 10 }}
       />
-
       <Button title="Verify OTP" onPress={verifyOtp} />
     </View>
   );
