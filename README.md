@@ -1,6 +1,5 @@
 to install the system : 
 android : https://expo.dev/accounts/intanhbrh/projects/ANPR_Project/builds/5ef412a1-cce9-4240-850b-ad7d4ec8cc92
-ios: 
 
 # 🚗 ANPR School Pickup System
 
@@ -160,11 +159,22 @@ The app automatically detects the user role based on their school email:
 - The school database is only accessible on **school WiFi**
   
 ## 📂 Project Structure
+<p align="center">
+  <img src="images/mainmenu.png" width="500"/><br/>
+  <sub>Main Menu</sub>
+</p>
 
-### Menu, Notification, Parents
-<p>
-  <img src="images/mainmenu.png" width="800"/>
-  <img src="images/notif.jpeg" width="200"/>
-  <img src="images/parents.png" width="800"/>
-  <img src="images/otp.png" width="300"/>
+<p align="center">
+  <img src="images/notif.jpeg" width="150"/><br/>
+  <sub>Notification</sub>
+</p>
+
+ <p align="center">
+  <img src="images/parents.png" width="800"/><br/>
+  <sub> parents login</sub>
+   
+</p>
+<p align="center">
+ <img src="images/otp.png" width="500"/><br/>
+  <sub> otp via email</sub>
 </p>
