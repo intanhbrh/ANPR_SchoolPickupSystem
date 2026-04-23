@@ -161,8 +161,9 @@ The app automatically detects the user role based on their school email:
   
 ## 📂 Project Structure
 
-### Login Page
+### Menu and Notif Received
 <p>
-  <img src="images/mainmenu.png" width="400"/>
+  <img src="images/mainmenu.png" width="800"/>
   <img src="images/notif.jpeg" width="250"/>
+  <img src="images/parents.png" width="300"/>
 </p>
