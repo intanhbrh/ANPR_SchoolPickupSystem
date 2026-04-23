@@ -10,12 +10,12 @@ import HistoryScreen from './src/components/HistoryScreen';
 import LaneScreen from './src/components/LaneScreen';
 import MenuScreen from './src/components/MenuScreen';
 import ProfileScreen from './src/components/ProfileScreen';
+import ParentScreen from './src/components/ParentScreen';
 
 
 
 // Ensure this IP and protocol match your Flask-SocketIO setup
 const SOCKET_URL = "http://10.250.34.10:80";
-
 
 // --- NOTIFICATION HANDLER SETUP ---
 Notifications.setNotificationHandler({
@@ -218,6 +218,7 @@ const getStyles = (isDark) => {
             paddingHorizontal: 15,
             backgroundColor: colors.background,
         },
+
 
         // --- Header & Login ---
         header: {
@@ -674,6 +675,13 @@ const App = () => {
     const [studentFilter, setStudentFilter] = useState("");
     const [userName, setUserName] = useState("");
     const [userEmail, setUserEmail] = useState("");
+    const [otpSent, setOtpSent] = useState(false);
+    const [otpCode, setOtpCode] = useState("");
+   const [isParent, setIsParent] = useState(false);
+   const [parentLoginEmail, setParentLoginEmail] = useState("");
+   const [showParentLogin, setShowParentLogin] = useState(false);
+   
+
 
     // Language setting (default to English)
     const [currentLanguage, setCurrentLanguage] = useState('en');
@@ -838,51 +846,88 @@ const App = () => {
         setLane(tr.pending);
     }, [tr]);
 
+const handleParentLogin = async () => {
+  if (!parentLoginEmail.trim()) {
+    setErrorMessage("Please enter your email");
+    return;
+  }
+  try {
+    const response = await fetch("http://10.252.2.107:3000/parent-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: parentLoginEmail }),
+    });
+    const data = await response.json();
+    if (response.ok) {
+      setUserName(data.user.fullname || "");
+      setUserEmail(data.user.email || "");
+      setIsParent(true);
+      setIsAuthenticated(true);
+      showNotification("Welcome, " + data.user.fullname, "success");
+    } else {
+      setErrorMessage(data.error || "Email not found");
+    }
+  } catch (error) {
+    setErrorMessage("Cannot connect to server");
+  }
+};
 
-const handleLogin = async () => {
-    // Check email format
+const handleSendOtp = async () => {
     if (!userEmail.endsWith("@kl.his.edu.my")) {
         setErrorMessage("Use school email only");
         showNotification("Use school email only", "error");
         return;
     }
-
     try {
-        const response = await fetch("http://10.252.2.107:3000/login", {
+        const response = await fetch("http://10.252.2.107:3000/send-otp", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                email: userEmail,
-            }),
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: userEmail }),
         });
-
         const data = await response.json();
-
         if (response.ok) {
-    // Save user info from database response
-    setUserName(data.user.fullname || "");
-    setUserEmail(data.user.email || "");
-    
-    // Save to AsyncStorage for next time
-    await AsyncStorage.setItem("user_authenticated", "true");
-    await AsyncStorage.setItem("user_registration", JSON.stringify({
-        name: data.user.fullname,
-        email: data.user.email,
-    }));
-    
-    setIsAuthenticated(true);
-    setCurrentScreen("Menu");
-    showNotification("Login successful", "success");
-    
+            setOtpSent(true);
+            setErrorMessage("");
+            showNotification("OTP sent to your school email!", "success");
         } else {
-            setErrorMessage(data.message || "Login failed");
-            showNotification(data.message || "Login failed", "error");
+            setErrorMessage(data.error || data.message || "Failed to send OTP");
         }
-
     } catch (error) {
-        console.error("Login error:", error);
+        setErrorMessage("Cannot connect to server");
+        showNotification("Cannot connect to server", "error");
+    }
+};
+
+
+const handleLogin = async () => {
+    // Check email format
+    if (!otpCode.trim()) {
+        setErrorMessage("Please enter the OTP code");
+        return;
+    }
+    try {
+        const response = await fetch("http://10.252.2.107:3000/verify-otp", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: userEmail, otp: otpCode }),
+        });
+        const data = await response.json();
+        if (response.ok) {
+            setUserName(data.user.fullname || "");
+            setUserEmail(data.user.email || "");
+            await AsyncStorage.setItem("user_authenticated", "true");
+            await AsyncStorage.setItem("user_registration", JSON.stringify({
+                name: data.user.fullname,
+                email: data.user.email,
+            }));
+            setIsAuthenticated(true);
+            setCurrentScreen("Menu");
+            showNotification("Login successful", "success");
+        } else {
+            setErrorMessage(data.error || data.message || "Invalid OTP");
+            showNotification(data.error || "Invalid OTP", "error");
+        }
+    } catch (error) {
         setErrorMessage("Cannot connect to server");
         showNotification("Cannot connect to server", "error");
     }
@@ -898,6 +943,7 @@ const handleLogin = async () => {
             reconnectionDelay: 3000,
             timeout: 20000,
         });
+    
 
         socket.on("connect", () => { setSocketConnected(true); });
         socket.on("disconnect", (reason) => { setSocketConnected(false); });
@@ -906,6 +952,7 @@ const handleLogin = async () => {
 });
 
         socket.on("update_data", async (data) => {
+
             // Use translated defaults for live data
             setStudentName(data.studentname || tr.unknown);
             setLane(data.lane || tr.noLaneDetected);
@@ -934,26 +981,41 @@ const handleLogin = async () => {
             }
 
             // Trigger notification for new detection
-            if (data.studentname && data.studentname !== "Unknown") {
-                // Check filter
-                const filter = studentFilter.trim().toLowerCase();
-                const studentName = data.studentname.toLowerCase();
+           if (data.studentname && data.studentname !== "Unknown") {
+    const isStaff = userEmail && !userEmail.split('@')[0].match(/^\d/);
+    const isStudent = userEmail && userEmail.split('@')[0].match(/^\d/);
+    const detectedName = data.studentname.toLowerCase();
+    const loggedInName = userName.toLowerCase();
 
-                if (!filter || studentName.includes(filter)) {
-                    const message = `${tr.success}: ${data.studentname}`;
-                    showNotification(message, 'success');
+    // Check if this notification is relevant to this user
+    const shouldNotify = isStaff || (isStudent && detectedName.includes(loggedInName.split(' ')[0].toLowerCase()));
 
-                    // Schedule system notification
-                    Notifications.scheduleNotificationAsync({
-                        content: {
-                            title: tr.systemTitle,
-                            body: message,
-                            sound: true,
-                        },
-                        trigger: null, // Show immediately
-                    });
-                }
-            }
+    if (shouldNotify) {
+        // Different message for staff vs student
+        let notifTitle = '';
+        let notifBody = '';
+
+        if (isStaff) {
+            notifTitle = `🚗 Vehicle Detected`;
+            notifBody = `${data.studentname} — Parent arrived at ${data.lane || 'pickup zone'}`;
+        } else {
+            notifTitle = `🚗 Your Parent Has Arrived!`;
+            notifBody = `Please proceed to ${data.lane || 'the pickup zone'} now.`;
+        }
+// after change ^
+
+        showNotification(notifBody, 'success');
+
+        Notifications.scheduleNotificationAsync({
+            content: {
+                title: notifTitle,
+                body: notifBody,
+                sound: true,
+            },
+            trigger: null,
+        });
+    }
+}
 
             // --- SECOND ROUND HANDLING ---
             // Detect second round via common keys: second_round, secondRound or round === 2
@@ -966,7 +1028,10 @@ const handleLogin = async () => {
                 if (data.parentPushTokens && Array.isArray(data.parentPushTokens)) tokens.push(...data.parentPushTokens);
 
                 const title = `${tr.schoolName}`;
-                const body = `Second-round pickup detected for ${data.studentname}. Please notify the child.`;
+                const isStaff = userEmail && !userEmail.split('@')[0].match(/^\d/);
+                const body = isStaff 
+                ? `⚠️ Second round: ${data.studentname} has not been picked up yet!`
+                :`⚠️ Please hurry! Your parent is waiting at ${data.lane || 'the pickup zone'}.`;
 
                 if (tokens.length > 0) {
                     // Fire off push notifications (best-effort)
@@ -988,10 +1053,41 @@ const handleLogin = async () => {
                     },
                     trigger: null,
                 });
+           }
+
+            // Show success when student is picked up (not second round)
+            if (!isSecondRound && data.studentname && data.studentname !== "Unknown") {
+                const isStaff = userEmail && !userEmail.split('@')[0].match(/^\d/);
+                if (isStaff) {
+                    showNotification(`✅ ${data.studentname} has been picked up successfully!`, 'success');
+                }
             }
         });
 
+        socket.on("parent_arrived", (data) => {
+            const myName = userName.toLowerCase();
+            const childName = data.childName.toLowerCase();
+            const isStudent = userEmail && userEmail.split('@')[0].match(/^\d/);
+
+            if (isStudent && childName.includes(myName.split(' ')[0].toLowerCase())){
+                showNotification(
+                    `🚗 Your parent is here! Please go to ${data.lane}`,
+                    'success'
+                );
+                Notifications.scheduleNotificationAsync({
+                    content: {
+                        title: `🚗 Your parent Has Arrived!`,
+                        body: `🚗${data.parentName} is at ${data.lane}. Please head there now!`,
+                        sound: true,
+                    },
+                    trigger: null,
+                });
+            }
+
+        });
+
         return () => { socket.disconnect(); };
+
     }, [isAuthenticated, tr]);
 
     const filteredRecentList = recentList.filter(item =>
@@ -1001,47 +1097,212 @@ const handleLogin = async () => {
     // --- RENDERING LOGIC (Using the tr object for translation) ---
 
     // 1. Render Login Screen
-    if (!isAuthenticated) {
-        return (
+ // 1. Render Login Screen
+if (!isAuthenticated) {
+    return (
         <KeyboardAvoidingView
-            style={{ flex: 1}}
+            style={{ flex: 1 }}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
             <ScrollView
-                contentContainerStyle={{ flexGrow: 1}}
+                contentContainerStyle={{ flexGrow: 1 }}
                 keyboardShouldPersistTaps="handled"
-                style={{backgroundColor: isDarkMode ? '#121212' : '#FFFFFF' }}
+                style={{ backgroundColor: isDarkMode ? '#121212' : '#FFFFFF' }}
             >
-            
-            <View style={styles.authContainer}>
+                <View style={styles.authContainer}>
 
-                <View style={styles.header}>
-                    <Text style={styles.schoolName}>{tr.schoolName}</Text>
-                    <Image source={require("./assets/icon.png")} style={styles.banner} />
-                    <Text style={styles.subheading}>{tr.systemTitle}</Text>
+                    {/* Logo + School Name */}
+                    <View style={styles.header}>
+                        <Text style={styles.schoolName}>{tr.schoolName}</Text>
+                        <Image source={require("./assets/icon.png")} style={styles.banner} />
+                        <Text style={styles.subheading}>{tr.systemTitle}</Text>
+                    </View>
+
+                    {/* ── PARENT LOGIN ── */}
+                    {showParentLogin ? (
+                        <View style={{ width: '100%', alignItems: 'center' }}>
+
+                            <Text style={{
+                                fontSize: 22,
+                                fontWeight: '800',
+                                color: isDarkMode ? '#FFFFFF' : '#1A1A1A',
+                                marginBottom: 6,
+                            }}>
+                                Parent Login
+                            </Text>
+
+                            <Text style={{
+                                fontSize: 14,
+                                color: isDarkMode ? '#AAAAAA' : '#666666',
+                                marginBottom: 24,
+                                textAlign: 'center',
+                                paddingHorizontal: 20,
+                            }}>
+                                Enter your registered email address
+                            </Text>
+
+                            <TextInput
+                                style={styles.input}
+                                value={parentLoginEmail}
+                                onChangeText={(text) => {
+                                    setParentLoginEmail(text);
+                                    setErrorMessage("");
+                                }}
+                                placeholder="yourname@gmail.com"
+                                autoCapitalize="none"
+                                keyboardType="email-address"
+                                placeholderTextColor={isDarkMode ? darkColors.textSecondary : lightColors.textSecondary}
+                            />
+
+                            {errorMessage ? (
+                                <Text style={styles.error}>{errorMessage}</Text>
+                            ) : null}
+
+                            <TouchableOpacity
+                                style={[styles.button, { width: '85%', alignItems: 'center' }]}
+                                onPress={handleParentLogin}
+                            >
+                                <Text style={styles.buttonText}>Login as Parent</Text>
+                            </TouchableOpacity>
+
+                            {/* Back button */}
+                            <TouchableOpacity
+                                style={{
+                                    marginTop: 20,
+                                    paddingVertical: 12,
+                                    paddingHorizontal: 24,
+                                }}
+                                onPress={() => {
+                                    setShowParentLogin(false);
+                                    setParentLoginEmail("");
+                                    setErrorMessage("");
+                                }}
+                            >
+                                <Text style={{
+                                    color: isDarkMode ? '#AAAAAA' : '#666666',
+                                    textAlign: 'center',
+                                    fontSize: 15,
+                                }}>
+                                    ← Back to Staff / Student Login
+                                </Text>
+                            </TouchableOpacity>
+
+                        </View>
+
+                    ) : (
+
+                    /* ── STAFF / STUDENT LOGIN ── */
+                        <View style={{ width: '100%', alignItems: 'center' }}>
+
+                            <Text style={styles.instruction}>{tr.accessControl}</Text>
+
+                            {/* School email input */}
+                            <TextInput
+                                style={styles.input}
+                                value={userEmail}
+                                onChangeText={(text) => {
+                                    setUserEmail(text);
+                                    setOtpSent(false);
+                                    setOtpCode("");
+                                    setErrorMessage("");
+                                }}
+                                placeholder="Enter school email"
+                                autoCapitalize="none"
+                                keyboardType="email-address"
+                                placeholderTextColor={isDarkMode ? darkColors.textSecondary : lightColors.textSecondary}
+                                editable={!otpSent}
+                            />
+
+                            {/* OTP input */}
+                            {otpSent && (
+                                <TextInput
+                                    style={styles.input}
+                                    value={otpCode}
+                                    onChangeText={setOtpCode}
+                                    placeholder="Enter 6-digit OTP code"
+                                    keyboardType="number-pad"
+                                    maxLength={6}
+                                    placeholderTextColor={isDarkMode ? darkColors.textSecondary : lightColors.textSecondary}
+                                />
+                            )}
+
+                            {errorMessage ? (
+                                <Text style={styles.error}>{errorMessage}</Text>
+                            ) : null}
+
+                            {/* Send OTP / Verify button */}
+                            {!otpSent ? (
+                                <TouchableOpacity
+                                    style={[styles.button, { width: '85%', alignItems: 'center' }]}
+                                    onPress={handleSendOtp}
+                                >
+                                    <Text style={styles.buttonText}>Send OTP Code</Text>
+                                </TouchableOpacity>
+                            ) : (
+                                <>
+                                    <TouchableOpacity
+                                        style={[styles.button, { width: '85%', alignItems: 'center' }]}
+                                        onPress={handleLogin}
+                                    >
+                                        <Text style={styles.buttonText}>Verify & Login</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={{ marginTop: 15 }}
+                                        onPress={() => {
+                                            setOtpSent(false);
+                                            setOtpCode("");
+                                            setErrorMessage("");
+                                        }}
+                                    >
+                                        <Text style={{
+                                            color: isDarkMode ? '#AAAAAA' : '#666666',
+                                            textAlign: 'center',
+                                        }}>
+                                            ← Back / Resend OTP
+                                        </Text>
+                                    </TouchableOpacity>
+                                </>
+                            )}
+
+                            {/* Switch to Parent Login button — only when not in OTP flow */}
+                            {/* Parent Login Circle Button — top right */}
+{!otpSent && !showParentLogin && (
+    <TouchableOpacity
+        style={{
+            position: 'absolute',
+            top: Platform.OS === 'android' ? 20 : 50,
+            right: 20,
+            width: 52,
+            height: 52,
+            borderRadius: 26,
+            backgroundColor: isDarkMode ? '#0A2E28' : '#F0FAF8',
+            borderWidth: 1.5,
+            borderColor: '#00A389',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10,
+        }}
+        onPress={() => {
+            setShowParentLogin(true);
+            setErrorMessage("");
+            setUserEmail("");
+            setOtpSent(false);
+            setOtpCode("");
+        }}
+    >
+        <Text style={{ fontSize: 22 }}>👪</Text>
+    </TouchableOpacity>
+)}
+
+                        </View>
+                    )}
+
                 </View>
-
-                <Text style={styles.instruction}>{tr.accessControl}</Text>
-
-                <TextInput
-                    style={styles.input}
-                    value={userEmail}
-                    onChangeText={setUserEmail}
-                    placeholder="Enter school email"
-                    autoCapitalize="none"
-                    placeholderTextColor={isDarkMode ? darkColors.textSecondary : lightColors.textSecondary}
-/>
-    
-                {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
-                <TouchableOpacity style={styles.button} onPress={handleLogin}>
-                    <Text style={styles.buttonText}>{tr.authLaunch}</Text>
-                </TouchableOpacity>
-            </View>
             </ScrollView>
-            </KeyboardAvoidingView>
-        );
-    }
-    
+        </KeyboardAvoidingView>
+    );
+}
+   
 
     // 2. Render Settings Screen
     if (currentScreen === 'Settings') {
@@ -1068,6 +1329,30 @@ const handleLogin = async () => {
     // 3. Render History Screen
     // 2. Render Main App Screens based on currentScreen state
 
+
+    // Render Parent Screen
+if (isParent && isAuthenticated) {
+  return (
+    <ParentScreen
+  parentUser={{ fullname: userName, email: userEmail }}
+  lane={lane}
+  serverUrl="http://10.252.2.107:3000"
+  onLogout={async () => {
+        setIsAuthenticated(false);
+        setIsParent(false);
+        setUserName("");
+        setUserEmail("");
+        setParentLoginEmail("");
+        setShowParentLogin(false);
+        await AsyncStorage.removeItem("user_authenticated");
+        await AsyncStorage.removeItem("user_registration");
+      }}
+      styles={styles}
+      colors={rawColors}
+      isDarkMode={isDarkMode}
+    />
+  );
+}
     if (currentScreen === 'Menu') {
         return (
             <MenuScreen
@@ -1155,6 +1440,7 @@ await AsyncStorage.removeItem("user_registration");
             </TouchableOpacity>
 
             {/* Settings Icon Button - positioned higher */}
+
             <TouchableOpacity
                 style={[styles.settingsIcon, { top: Platform.OS === 'android' ? 15 : 50 }]}
                 onPress={() => {
@@ -1163,7 +1449,8 @@ await AsyncStorage.removeItem("user_registration");
                 }}
                 activeOpacity={0.6}
             >
-                <Text style={styles.settingsIconText}>⚙️</Text>
+            
+            <Text style={styles.settingsIconText}>⚙️</Text>
             </TouchableOpacity>
 
             <ScrollView contentContainerStyle={[styles.container, { paddingTop: Platform.OS === 'android' ? 80 : 120 }]} nestedScrollEnabled={true}>
@@ -1245,11 +1532,9 @@ await AsyncStorage.removeItem("user_registration");
         );
     })
 )}
-                </View>
+            </View>
 
             </ScrollView>
-
-
             <NotificationPopup
                 visible={notification.visible}
                 message={notification.message}
@@ -1263,4 +1548,3 @@ await AsyncStorage.removeItem("user_registration");
 };
 
 export default App;
-
