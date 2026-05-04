@@ -12,10 +12,9 @@ import MenuScreen from './src/components/MenuScreen';
 import ProfileScreen from './src/components/ProfileScreen';
 import ParentScreen from './src/components/ParentScreen';
 
-
-
 // Ensure this IP and protocol match your Flask-SocketIO setup
-const SOCKET_URL = "http://10.250.34.10:80";
+const SOCKET_URL = "http://10.250.34.10:80";  
+const SERVER_URL = "http://anpr.kl.his.edu.my"; 
 
 // --- NOTIFICATION HANDLER SETUP ---
 Notifications.setNotificationHandler({
@@ -171,6 +170,7 @@ const translations = {
 };
 
 // --- 2. DARK MODE COLOR DEFINITIONS ---
+
 const lightColors = {
     background: '#FFFFFF',
     card: '#FAFAFA',
@@ -852,7 +852,8 @@ const handleParentLogin = async () => {
     return;
   }
   try {
-    const response = await fetch("http://10.252.2.107:3000/parent-login", {
+    const response = await fetch(`${SERVER_URL}/parent-login`, {
+
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: parentLoginEmail }),
@@ -879,7 +880,7 @@ const handleSendOtp = async () => {
         return;
     }
     try {
-        const response = await fetch("http://10.252.2.107:3000/send-otp", {
+        const response = await fetch(`${SERVER_URL}/send-otp`,  {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email: userEmail }),
@@ -906,7 +907,7 @@ const handleLogin = async () => {
         return;
     }
     try {
-        const response = await fetch("http://10.252.2.107:3000/verify-otp", {
+        const response = await fetch(`${SERVER_URL}/verify-otp`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email: userEmail, otp: otpCode }),
@@ -937,7 +938,7 @@ const handleLogin = async () => {
         if (!isAuthenticated) return;
 
         const socket = io(SOCKET_URL, {
-            transports: ["websocket"],
+            transports: ["websocket", "polling"],
             reconnection: true,
             reconnectionAttempts: 50,
             reconnectionDelay: 3000,
@@ -948,6 +949,9 @@ const handleLogin = async () => {
         socket.on("connect", () => { setSocketConnected(true); });
         socket.on("disconnect", (reason) => { setSocketConnected(false); });
         socket.on("connect_error", (error) => { 
+            console.log("SOCKET ERROR:", error.message);
+            
+            
     // Silently ignore - students' Flask server may not be running
 });
 
@@ -1336,7 +1340,7 @@ if (isParent && isAuthenticated) {
     <ParentScreen
   parentUser={{ fullname: userName, email: userEmail }}
   lane={lane}
-  serverUrl="http://10.252.2.107:3000"
+  serverUrl={SERVER_URL}
   onLogout={async () => {
         setIsAuthenticated(false);
         setIsParent(false);
