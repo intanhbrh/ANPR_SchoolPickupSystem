@@ -11,7 +11,7 @@ export default function EmailScreen({ navigation }) {
     }
 
     try {
-      const response = await fetch("http://10.252.2.107:3000/send-otp", {
+      const response = await fetch("http://anpr.kl.his.edu.my/send-otp", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

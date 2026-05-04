@@ -7,7 +7,7 @@ export default function OtpScreen({ route, navigation }) {
 
   const verifyOtp = async () => {
     try {
-      const response = await fetch("http://10.252.2.107:3000/verify-otp", {
+      const response = await fetch("http://anpr.kl.his.edu.my/verify-otp", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

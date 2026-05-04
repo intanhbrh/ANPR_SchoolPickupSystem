@@ -3,8 +3,10 @@ import {
   View, Text, TouchableOpacity, SafeAreaView,
   ScrollView, ActivityIndicator, Platform
 } from 'react-native';
+import { SERVER_URL } from '../config';
 
-const ParentScreen = ({ parentUser, lane, serverUrl, onLogout, styles, colors, isDarkMode }) => {
+
+const ParentScreen = ({ parentUser, lane, onLogout, styles, colors, isDarkMode }) => {
   const [children, setChildren] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notifying, setNotifying] = useState(null); // which child is being notified
@@ -16,7 +18,7 @@ const ParentScreen = ({ parentUser, lane, serverUrl, onLogout, styles, colors, i
 
   const fetchChildren = async () => {
     try {
-      const res = await fetch(`${serverUrl}/parent-children/${encodeURIComponent(parentUser.email)}`);
+      const res = await fetch(`${SERVER_URL}/parent-children/${encodeURIComponent(parentUser.email)}`);
       const data = await res.json();
       setChildren(data);
     } catch (err) {
@@ -29,7 +31,7 @@ const ParentScreen = ({ parentUser, lane, serverUrl, onLogout, styles, colors, i
   const handleImHere = async (childName) => {
     setNotifying(childName);
     try {
-      await fetch(`${serverUrl}/parent-notify`, {
+      await fetch(`${SERVER_URL}/parent-notify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
