@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Keyboa
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { io } from "socket.io-client";
 
+
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import NotificationPopup from './src/components/NotificationPopup';
@@ -13,8 +14,8 @@ import ProfileScreen from './src/components/ProfileScreen';
 import ParentScreen from './src/components/ParentScreen';
 
 // Ensure this IP and protocol match your Flask-SocketIO setup
-const SOCKET_URL = "http://10.250.34.10:80";  
-const SERVER_URL = "http://anpr.kl.his.edu.my"; 
+const SOCKET_URL = "http://anpr.kl.his.edu.my:3000";
+const SERVER_URL = "http://anpr.kl.his.edu.my:3000";
 
 // --- NOTIFICATION HANDLER SETUP ---
 Notifications.setNotificationHandler({
@@ -680,6 +681,8 @@ const App = () => {
    const [isParent, setIsParent] = useState(false);
    const [parentLoginEmail, setParentLoginEmail] = useState("");
    const [showParentLogin, setShowParentLogin] = useState(false);
+   const [detectedPlate, setDetectedPlate] = useState("");
+const [isUnregistered, setIsUnregistered] = useState(false);
    
 
 
@@ -894,9 +897,10 @@ const handleSendOtp = async () => {
             setErrorMessage(data.error || data.message || "Failed to send OTP");
         }
     } catch (error) {
-        setErrorMessage("Cannot connect to server");
-        showNotification("Cannot connect to server", "error");
-    }
+    console.log("❌ fetch error:", error.message);
+    setErrorMessage("Cannot connect to server: " + error.message);
+    showNotification("Cannot connect to server", "error");
+}
 };
 
 
@@ -961,6 +965,8 @@ const handleLogin = async () => {
             setStudentName(data.studentname || tr.unknown);
             setLane(data.lane || tr.noLaneDetected);
             setLastDetectedTime(new Date().toLocaleTimeString());
+            setDetectedPlate(data.plate||"");
+            setIsUnregistered(data.unregistered || false);
 
             // Check if this is a new detection (not "Unknown" or scanning state)
             if (data.studentname && data.studentname !== "Unknown" && data.studentname !== tr.scanning) {
@@ -1118,7 +1124,7 @@ if (!isAuthenticated) {
                     {/* Logo + School Name */}
                     <View style={styles.header}>
                         <Text style={styles.schoolName}>{tr.schoolName}</Text>
-                        <Image source={require("./assets/icon.png")} style={styles.banner} />
+                        <Image source={require("./assets/anpr-icon.png")} style={styles.banner} />
                         <Text style={styles.subheading}>{tr.systemTitle}</Text>
                     </View>
 
@@ -1268,43 +1274,18 @@ if (!isAuthenticated) {
                                 </>
                             )}
 
-                            {/* Switch to Parent Login button — only when not in OTP flow */}
-                            {/* Parent Login Circle Button — top right */}
-{!otpSent && !showParentLogin && (
-    <TouchableOpacity
-        style={{
-            position: 'absolute',
-            top: Platform.OS === 'android' ? 20 : 50,
-            right: 20,
-            width: 52,
-            height: 52,
-            borderRadius: 26,
-            backgroundColor: isDarkMode ? '#0A2E28' : '#F0FAF8',
-            borderWidth: 1.5,
-            borderColor: '#00A389',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 10,
-        }}
-        onPress={() => {
-            setShowParentLogin(true);
-            setErrorMessage("");
-            setUserEmail("");
-            setOtpSent(false);
-            setOtpCode("");
-        }}
-    >
-        <Text style={{ fontSize: 22 }}>👪</Text>
-    </TouchableOpacity>
-)}
+                       
+
+
+
 
                         </View>
-                    )}
+                   )}
 
-                </View>
-            </ScrollView>
-        </KeyboardAvoidingView>
-    );
+                 </View>
+           </ScrollView>
+      </KeyboardAvoidingView>
+  );
 }
    
 
@@ -1357,30 +1338,64 @@ if (isParent && isAuthenticated) {
     />
   );
 }
-    if (currentScreen === 'Menu') {
-        return (
-            <MenuScreen
-                onNavigate={async (screen) => {
-                    if (screen === 'Logout') {
-                        setIsAuthenticated(false);
-setUserName("");
-setUserEmail("");
-await AsyncStorage.removeItem("user_authenticated");
-await AsyncStorage.removeItem("user_registration");
-                    } else {
-                        // Track previous screen for proper back navigation
-                        if (screen === 'History' || screen === 'Profile' || screen === 'Dashboard') {
-                            setPreviousScreen('Menu');
-                        }
-                        setCurrentScreen(screen);
-                    }
-                }}
-                styles={styles}
-                colors={rawColors}
-                tr={tr}
-            />
-        );
-    }
+ if (currentScreen === 'Menu') {
+    return (
+        <MenuScreen
+            onNavigate={async (screen) => {
+
+                if (screen === 'Logout') {
+
+                    Alert.alert(
+                        "Logout",
+                        "Are you sure you want to log out?",
+                        [
+                            {
+                                text: "Cancel",
+                                style: "cancel"
+                            },
+                            {
+                                text: "Logout",
+                                style: "destructive",
+                                onPress: async () => {
+
+                                    setIsAuthenticated(false);
+
+                                    // reset login flow
+                                    setOtpSent(false);
+                                    setOtpCode("");
+                                    setErrorMessage("");
+
+                                    // clear user info
+                                    setUserName("");
+                                    setUserEmail("");
+                                    setParentLoginEmail("");
+                                    setShowParentLogin(false);
+                                    setIsParent(false);
+
+                                    // clear storage
+                                    await AsyncStorage.removeItem("user_authenticated");
+                                    await AsyncStorage.removeItem("user_registration");
+                                }
+                            }
+                        ]
+                    );
+
+                    return;
+                }
+
+                // normal navigation
+                if (screen === 'History' || screen === 'Profile' || screen === 'Dashboard') {
+                    setPreviousScreen('Menu');
+                }
+
+                setCurrentScreen(screen);
+            }}
+            styles={styles}
+            colors={rawColors}
+            tr={tr}
+        />
+    );
+}
 
     if (currentScreen === 'Profile') {
         return (
